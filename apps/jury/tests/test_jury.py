@@ -222,8 +222,57 @@ def test_the_terminal_style_colours_verdicts_and_drops_the_markdown():
     assert "**" not in out, f"markdown leaked onto the screen:\n{out}"
     assert "##" not in out
     # Supported and contradicted must not look alike — that is the whole point.
-    assert f"{Terminal.VERDICT_COLOURS['supported']}\033[1msupported" in out
-    assert f"{Terminal.VERDICT_COLOURS['contradicted']}\033[1mcontradicted" in out
+    assert f"{Terminal.VERDICT_COLOURS['supported']}\033[1m✓ supported" in out
+    assert f"{Terminal.VERDICT_COLOURS['contradicted']}\033[1m⊘ contradicted" in out
+    # Green and orange are far apart, but colour is never the only signal:
+    # strip the escape codes and the marks still tell the verdicts apart.
+    assert "✓ supported" in out and "⊘ contradicted" in out
+
+
+def test_every_verdict_has_its_own_mark():
+    # A reader who cannot distinguish the colours — colourblind, a dim theme,
+    # a piped copy — must still be able to tell the four verdicts apart.
+    marks = set(Terminal.VERDICT_MARKS.values())
+    assert len(marks) == len(Terminal.VERDICT_MARKS)
+    assert set(Terminal.VERDICT_MARKS) == set(Terminal.VERDICT_COLOURS)
+
+
+def test_a_claim_is_numbered_with_its_consensus_and_details_beneath_it():
+    # The organisation people actually read: the claim, immediately what the
+    # jury made of it, then the votes indented under a Details label.
+    findings = tally(
+        [
+            Judgment(
+                claim="A well-rested mind makes fewer mistakes",
+                opinions=[
+                    Opinion("a", "peaceful-receipt", "unsupported", "no evidence"),
+                    Opinion("b", "peaceful-receipt", "unsupported", "no study"),
+                    Opinion("c", "peaceful-receipt", "supported", "stated plainly"),
+                ],
+            )
+        ]
+    )
+    out = report("doc.txt", panel(), findings, style=Terminal())
+    lines = [line for line in out.splitlines() if line.strip()]
+    claim_at = next(i for i, ln in enumerate(lines) if "Claim #1:" in ln)
+    # No gap between the claim and the verdict on it — one thought.
+    assert "Consensus:" in lines[claim_at + 1]
+    assert "2 of 3 juror(s) agreed" in lines[claim_at + 1]
+    assert "Details:" in lines[claim_at + 2]
+    # The votes sit indented under Details, not flush with the claim.
+    assert lines[claim_at + 3].startswith("     ")
+
+
+def test_a_long_reason_is_wrapped_and_indented_under_its_verdict():
+    # Reasons run to several lines. Flush left they are a wall of prose; in
+    # their own indented block the verdict column stays scannable.
+    reason = "The document asserts this " + "at considerable length " * 12
+    findings = tally(
+        [Judgment(claim="c", opinions=[Opinion("a", "m", "unsupported", reason)])]
+    )
+    out = report("doc.txt", panel(), findings, style=Terminal())
+    wrapped = [ln for ln in out.splitlines() if ln.startswith(" " * 9)]
+    assert len(wrapped) > 1, f"reason was not wrapped:\n{out}"
 
 
 def test_both_styles_carry_the_same_words():

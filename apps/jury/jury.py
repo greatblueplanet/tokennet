@@ -33,7 +33,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
+import textwrap
 from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
@@ -412,8 +414,18 @@ class Markdown:
     def verdict(self, text: str) -> str:
         return f"**{text}**"
 
-    def claim(self, glyph: str, text: str) -> str:
-        return f"## {glyph} {text}"
+    def claim(self, number: int, glyph: str, text: str) -> str:
+        return f"## {glyph} Claim #{number}: {text}"
+
+    def consensus(self, verdict: str, agreed: int, voted: int) -> str:
+        return f"**Consensus:** {verdict} — {agreed} of {voted} juror(s) agreed."
+
+    def details(self) -> str:
+        return "\n**Details:**\n"
+
+    def vote(self, verdict: str, byline: str, reason: str) -> str:
+        line = f"- **{verdict}** — *{byline}*"
+        return f"{line}: {reason}" if reason else line
 
     def rule(self) -> str:
         return "---"
@@ -430,13 +442,28 @@ class Terminal:
     BOLD = "\033[1m"
     DIM = "\033[2m"
     RESET = "\033[0m"
-    # supported reads as "fine", the two doubting verdicts as "look here", and
-    # a contradiction is the strongest of the three.
+
+    # 256-colour, not the basic 8: the basic palette is whatever the user's
+    # theme says it is, and its green and yellow land close enough together to
+    # be indistinguishable. Green against *orange* separates by brightness as
+    # well as hue, so it survives a dim theme.
+    GREEN = "\033[38;5;41m"
+    ORANGE = "\033[38;5;214m"
+    RED = "\033[38;5;196m"
+
     VERDICT_COLOURS = {
-        "supported": "\033[32m",
-        "unsupported": "\033[33m",
-        "contradicted": "\033[31m",
-        "abstained": "\033[2m",
+        "supported": GREEN,
+        "unsupported": ORANGE,
+        "contradicted": RED,
+        "abstained": DIM,
+    }
+    # Colour is never the only signal. Anyone red-green colourblind, or reading
+    # a piped copy with the codes stripped, still gets the mark.
+    VERDICT_MARKS = {
+        "supported": "✓",
+        "unsupported": "✗",
+        "contradicted": "⊘",
+        "abstained": "·",
     }
 
     def h1(self, text: str) -> str:
@@ -450,15 +477,46 @@ class Terminal:
 
     def verdict(self, text: str) -> str:
         colour = self.VERDICT_COLOURS.get(text, "")
-        return f"{colour}{self.BOLD}{text}{self.RESET}" if colour else text
+        mark = self.VERDICT_MARKS.get(text, "")
+        return f"{colour}{self.BOLD}{mark} {text}{self.RESET}" if colour else text
 
-    # The glyph is how you skim a long report, so it carries the same colour
-    # scale as the verdicts: green is fine, red is the one to go read.
-    FLAG_COLOURS = {"✓": "\033[32m", "≠": "\033[33m", "⚠": "\033[33m", "✗": "\033[31m"}
+    # The glyph is how you skim a long report, so it carries the same scale.
+    FLAG_COLOURS = {"✓": GREEN, "≠": ORANGE, "⚠": ORANGE, "✗": RED}
 
-    def claim(self, glyph: str, text: str) -> str:
+    def claim(self, number: int, glyph: str, text: str) -> str:
         colour = self.FLAG_COLOURS.get(glyph, self.DIM)
-        return f"{colour}{glyph}{self.RESET} {self.BOLD}{text}{self.RESET}"
+        return (
+            f"{colour}{glyph}{self.RESET} "
+            f"{self.BOLD}Claim #{number}: {text}{self.RESET}"
+        )
+
+    def consensus(self, verdict: str, agreed: int, voted: int) -> str:
+        # Directly under the claim, no blank line: the claim and what the jury
+        # made of it are one thought, and the eye should not have to cross a gap.
+        return (
+            f"   Consensus: {self.verdict(verdict)} "
+            f"{self.DIM}({agreed} of {voted} juror(s) agreed){self.RESET}"
+        )
+
+    def details(self) -> str:
+        return f"   {self.DIM}Details:{self.RESET}"
+
+    def vote(self, verdict: str, byline: str, reason: str) -> str:
+        """One juror's vote, indented under Details, with its reasoning wrapped
+        and indented again beneath it.
+
+        The reasons run to two or three lines each. Left flush against the
+        verdicts they become a wall of prose you cannot skim; set in their own
+        indented block, the verdict column stays scannable down the page.
+        """
+        head = f"     {self.verdict(verdict)}  {self.DIM}{byline}{self.RESET}"
+        if not reason:
+            return head
+        width = max(40, shutil.get_terminal_size((100, 24)).columns - 10)
+        body = textwrap.fill(
+            reason, width=width, initial_indent=" " * 9, subsequent_indent=" " * 9
+        )
+        return f"{head}\n{self.DIM}{body}{self.RESET}"
 
     def rule(self) -> str:
         return f"{self.DIM}{'─' * 60}{self.RESET}"
@@ -551,15 +609,15 @@ def report(
         )
     out.append(s.rule() + "\n")
 
-    for finding in findings:
-        out.append(s.claim(_flag(finding), finding.claim) + "\n")
+    for number, finding in enumerate(findings, 1):
+        # Claim, then straight into what the jury made of it, then the votes
+        # underneath — one block per claim, indented so the page has a spine.
+        out.append(s.claim(number, _flag(finding), finding.claim))
         if finding.undecided():
             out.append(s.em("No juror returned a usable verdict on this claim.") + "\n")
             continue
-        out.append(
-            f"{s.verdict(finding.majority)} — {finding.agreed} of "
-            f"{finding.voted} juror(s) agreed.\n"
-        )
+        out.append(s.consensus(finding.majority, finding.agreed, finding.voted))
+        out.append(s.details())
         # Every vote, with its byline: the independence is the evidence.
         for opinion in finding.opinions:
             byline = (
@@ -567,10 +625,7 @@ def report(
                 if opinion.maker
                 else opinion.juror
             )
-            line = f"- {s.verdict(opinion.verdict)} — {s.em(byline)}"
-            if opinion.reason.strip():
-                line += f": {opinion.reason.strip()}"
-            out.append(line)
+            out.append(s.vote(opinion.verdict, byline, opinion.reason.strip()))
         out.append("")
 
     out.append(

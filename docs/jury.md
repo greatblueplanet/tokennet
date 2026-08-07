@@ -95,8 +95,40 @@ reports can be diffed.
 
 The same report is rendered two ways. `--output` writes markdown. Printing to a
 terminal drops the markup — asterisks are noise you have to read around — and
-spends colour on the distinction that matters: **supported** green,
-**unsupported** yellow, **contradicted** red, abstentions dimmed, with the
-headline glyphs on the same scale. Redirected stdout gets markdown, since that
-is somebody saving the report rather than reading it.
+spends colour on the distinction that matters. Redirected stdout gets markdown,
+since that is somebody saving the report rather than reading it.
+
+| verdict | mark | colour |
+|---|---|---|
+| supported | ✓ | green |
+| unsupported | ✗ | orange |
+| contradicted | ⊘ | red |
+| abstained | · | dim |
+
+Two deliberate choices there. The colours are **256-colour, not the basic
+eight**: the basic palette is whatever the user's theme makes it, and its green
+and yellow land close enough together to be indistinguishable in a soft theme.
+Green against *orange* separates by brightness as well as hue. And **colour is
+never the only signal** — every verdict carries its own mark, so the report
+still reads for someone red-green colourblind, or in a piped copy with the
+escape codes stripped.
+
+## How a claim is laid out
+
+```
+⚠ Claim #1: A well-rested mind makes fewer mistakes
+   Consensus: ✗ unsupported (3 of 5 juror(s) agreed)
+   Details:
+     ✗ unsupported  The Devil's Advocate via peaceful-receipt
+         The document claims this without providing any evidence, survey or
+         study to support an empirical claim about rest and error reduction.
+     ✓ supported  The Evidence Skeptic via peaceful-receipt
+         The document directly states it as part of its argument.
+```
+
+The claim and the jury's verdict on it are one thought, so no blank line
+separates them. The votes sit under a `Details:` label, indented, with each
+juror's reasoning wrapped into its own block beneath its verdict — left flush,
+the reasons become a wall of prose that cannot be skimmed, and the verdict
+column is the thing you actually want to read down.
 

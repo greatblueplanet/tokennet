@@ -31,11 +31,23 @@ maker that served it. A verdict you can't audit is just one more opinion.
 
 ## Reading the verdict
 
-On a terminal the report is coloured rather than marked up: **supported** green,
-**unsupported** yellow, **contradicted** red, abstentions dimmed, and the
-headline glyph for each claim on the same scale. `--output` writes markdown
-instead, and so does a redirected stdout — that's someone saving the report, not
-reading it.
+On a terminal the report is coloured rather than marked up, one block per claim:
+
+```
+⚠ Claim #1: A well-rested mind makes fewer mistakes
+   Consensus: ✗ unsupported (3 of 5 juror(s) agreed)
+   Details:
+     ✗ unsupported  The Devil's Advocate via peaceful-receipt
+         The document claims this without providing any evidence, survey or
+         study to support an empirical claim about rest and error reduction.
+     ✓ supported  The Evidence Skeptic via peaceful-receipt
+         The document directly states it as part of its argument.
+```
+
+Supported is green, unsupported orange, contradicted red, abstentions dim — and
+every verdict also carries its own mark (✓ ✗ ⊘ ·), so the report still reads if
+you can't tell the colours apart. `--output` writes markdown instead, and so
+does a redirected stdout: that's someone saving the report, not reading it.
 
 The jury roster says which machine took which seat:
 
