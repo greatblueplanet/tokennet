@@ -397,30 +397,133 @@ def deliberate(
 # --- the report ---
 
 
+class Markdown:
+    """How the report is dressed when it is going into a file: markdown."""
+
+    def h1(self, text: str) -> str:
+        return f"# {text}"
+
+    def strong(self, text: str) -> str:
+        return f"**{text}**"
+
+    def em(self, text: str) -> str:
+        return f"*{text}*"
+
+    def verdict(self, text: str) -> str:
+        return f"**{text}**"
+
+    def claim(self, glyph: str, text: str) -> str:
+        return f"## {glyph} {text}"
+
+    def rule(self) -> str:
+        return "---"
+
+
+class Terminal:
+    """How the report is dressed when it is going to a screen.
+
+    Markdown on a terminal is worse than no markup at all — you end up reading
+    around the asterisks. So the emphasis becomes colour, and the verdicts get
+    the colour that matters: whether the jury backed the claim or doubted it.
+    """
+
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    RESET = "\033[0m"
+    # supported reads as "fine", the two doubting verdicts as "look here", and
+    # a contradiction is the strongest of the three.
+    VERDICT_COLOURS = {
+        "supported": "\033[32m",
+        "unsupported": "\033[33m",
+        "contradicted": "\033[31m",
+        "abstained": "\033[2m",
+    }
+
+    def h1(self, text: str) -> str:
+        return f"{self.BOLD}{text}{self.RESET}\n{'═' * len(text)}"
+
+    def strong(self, text: str) -> str:
+        return f"{self.BOLD}{text}{self.RESET}"
+
+    def em(self, text: str) -> str:
+        return f"{self.DIM}{text}{self.RESET}"
+
+    def verdict(self, text: str) -> str:
+        colour = self.VERDICT_COLOURS.get(text, "")
+        return f"{colour}{self.BOLD}{text}{self.RESET}" if colour else text
+
+    # The glyph is how you skim a long report, so it carries the same colour
+    # scale as the verdicts: green is fine, red is the one to go read.
+    FLAG_COLOURS = {"✓": "\033[32m", "≠": "\033[33m", "⚠": "\033[33m", "✗": "\033[31m"}
+
+    def claim(self, glyph: str, text: str) -> str:
+        colour = self.FLAG_COLOURS.get(glyph, self.DIM)
+        return f"{colour}{glyph}{self.RESET} {self.BOLD}{text}{self.RESET}"
+
+    def rule(self) -> str:
+        return f"{self.DIM}{'─' * 60}{self.RESET}"
+
+
+Style = Markdown | Terminal
+
+
+def _seats(by_maker: dict[str, int]) -> str:
+    """One juror's machines, busiest first: `curvy-sugar ×3, acme ×1`.
+
+    Ties break on the name so the same votes always render the same way — a
+    report you can diff is worth more than one ordered by dict insertion.
+    """
+    return ", ".join(
+        maker if votes == 1 else f"{maker} ×{votes}"
+        for maker, votes in sorted(by_maker.items(), key=lambda kv: (-kv[1], kv[0]))
+    )
+
+
 def report(
     origin: str,
     jury: list[Persona],
     findings: list[Finding],
     locations: dict[str, str] | None = None,
+    style: Style | None = None,
 ) -> str:
-    """Render the jury's findings as markdown, headed by the empanelled
-    personas so a reader knows exactly which stances judged the document.
-    Every juror's vote is shown with the machine that served it — a verdict
-    you can't audit is just another opinion. `locations` maps a maker's name
-    to its advertised location, for the Served-by line."""
-    out = ["# Second opinion\n", f"**Document:** {origin}\n"]
-    out.append(f"**Jury:** {len(jury)} juror(s), each a different reviewer persona:\n")
-    for p in jury:
-        out.append(f"- **#{p.number} {p.name}** — {p.lens}")
-    out.append("")
+    """Render the jury's findings, headed by the empanelled personas so a
+    reader knows exactly which stances judged the document. Every juror's vote
+    is shown with the machine that served it — a verdict you can't audit is
+    just another opinion. `locations` maps a maker's name to its advertised
+    location, for the Served-by line.
 
-    # The machines that actually served the votes, and where they are — the
-    # at-a-glance answer to "were the seats really different?"
+    `style` decides the dressing: `Markdown()` (the default) for a file,
+    `Terminal()` for a screen. One report, two skins — the structure and the
+    wording are identical, so what you read is what you saved."""
+    s = style or Markdown()
+    # Two tallies over the same votes: which machines served at all, and which
+    # machine took which seat. The relay picks a maker per request, so a juror
+    # is not pinned to one machine — a persona's votes can be spread across
+    # several, and that is what the per-juror line has to show.
     served: dict[str, int] = {}
+    seats: dict[str, dict[str, int]] = {}
     for finding in findings:
         for opinion in finding.opinions:
             if opinion.maker:
                 served[opinion.maker] = served.get(opinion.maker, 0) + 1
+                by_maker = seats.setdefault(opinion.juror, {})
+                by_maker[opinion.maker] = by_maker.get(opinion.maker, 0) + 1
+
+    out = [s.h1("Second opinion") + "\n", f"{s.strong('Document:')} {origin}\n"]
+    out.append(
+        f"{s.strong('Jury:')} {len(jury)} juror(s), "
+        "each a different reviewer persona:\n"
+    )
+    for p in jury:
+        out.append(f"- {s.strong(f'#{p.number} {p.name}')} — {p.lens}")
+        # Which machine took this seat. The relay picks per request, so a busy
+        # juror can show several — that spread is the independence, visible.
+        if p.name in seats:
+            out.append("  - " + s.em("served by " + _seats(seats[p.name])))
+    out.append("")
+
+    # The machines that actually served the votes, and where they are — the
+    # at-a-glance answer to "were the seats really different?"
     if served:
         parts = []
         for maker, votes in sorted(served.items(), key=lambda kv: -kv[1]):
@@ -430,7 +533,7 @@ def report(
                 if where
                 else f"{maker} — {votes} vote(s)"
             )
-        out.append("**Served by:** " + "; ".join(parts) + "\n")
+        out.append(s.strong("Served by:") + " " + "; ".join(parts) + "\n")
 
     if not findings:
         out.append("No checkable claims were found in this document.")
@@ -440,21 +543,21 @@ def report(
     contested = sum(1 for f in findings if f.contested())
     out.append(
         f"The jury read {len(findings)} claim(s). "
-        f"It doubted **{doubted}**, and split on **{contested}**.\n"
+        f"It doubted {s.strong(str(doubted))}, and split on {s.strong(str(contested))}.\n"
     )
     if doubted == 0 and contested == 0:
         out.append(
             "Nothing stood out: the jury agreed the document supports what it claims.\n"
         )
-    out.append("---\n")
+    out.append(s.rule() + "\n")
 
     for finding in findings:
-        out.append(f"## {_flag(finding)} {finding.claim}\n")
+        out.append(s.claim(_flag(finding), finding.claim) + "\n")
         if finding.undecided():
-            out.append("*No juror returned a usable verdict on this claim.*\n")
+            out.append(s.em("No juror returned a usable verdict on this claim.") + "\n")
             continue
         out.append(
-            f"**{finding.majority}** — {finding.agreed} of "
+            f"{s.verdict(finding.majority)} — {finding.agreed} of "
             f"{finding.voted} juror(s) agreed.\n"
         )
         # Every vote, with its byline: the independence is the evidence.
@@ -464,16 +567,20 @@ def report(
                 if opinion.maker
                 else opinion.juror
             )
-            line = f"- **{opinion.verdict}** — *{byline}*"
+            line = f"- {s.verdict(opinion.verdict)} — {s.em(byline)}"
             if opinion.reason.strip():
                 line += f": {opinion.reason.strip()}"
             out.append(line)
         out.append("")
 
     out.append(
-        "---\n\n*The jury judged only whether **this document** supports each "
-        "claim — not whether the claim is true in the world. A split jury is "
-        "not proof of anything; it is a sentence worth reading yourself.*"
+        s.rule()
+        + "\n\n"
+        + s.em(
+            "The jury judged only whether this document supports each claim — "
+            "not whether the claim is true in the world. A split jury is not "
+            "proof of anything; it is a sentence worth reading yourself."
+        )
     )
     return "\n".join(out) + "\n"
 
@@ -598,12 +705,18 @@ def main(argv: list[str] | None = None) -> None:
 
     # Tally — locally. No model gets to summarize the jurors; that would
     # launder the disagreement we came for.
-    markdown = report(origin, jury, tally(judgments), locations)
+    findings = tally(judgments)
+
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
-            f.write(markdown)
+            f.write(report(origin, jury, findings, locations))
         print(f"Written to {args.output}.", file=sys.stderr)
-    print(markdown)
+
+    # A file gets markdown; a terminal gets colour. Redirected stdout is
+    # somebody saving the report, so it gets markdown too — escape codes in a
+    # piped file are nobody's idea of a good time.
+    screen: Style = Terminal() if sys.stdout.isatty() else Markdown()
+    print(report(origin, jury, findings, locations, style=screen))
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from apps.jury.jury import (
     MAX_DOCUMENT_CHARS,
     Judgment,
     Opinion,
+    Terminal,
     _parse_claims,
     _parse_opinion,
     excerpt,
@@ -168,6 +169,70 @@ def test_the_report_names_the_machines_that_served_and_where():
         "**Served by:** ludicrous-foot (Palo Alto, US) — 2 vote(s); patient-anvil — 1 vote(s)"
         in out
     )
+
+
+def test_the_roster_says_which_machine_took_which_seat():
+    # The Served-by line says which machines served; this says which seat each
+    # one sat in. A juror is not pinned to a machine — the relay picks per
+    # request — so a persona's votes can spread across several, busiest first.
+    jury = panel()
+    first, second = jury[0].name, jury[1].name
+    findings = tally(
+        [
+            Judgment(
+                claim="c1",
+                opinions=[
+                    Opinion(first, "patient-anvil", "supported", ""),
+                    Opinion(second, "ludicrous-foot", "unsupported", ""),
+                ],
+            ),
+            Judgment(
+                claim="c2",
+                opinions=[
+                    Opinion(first, "patient-anvil", "supported", ""),
+                    Opinion(second, "patient-anvil", "unsupported", ""),
+                ],
+            ),
+        ]
+    )
+    out = report("doc.txt", jury, findings)
+    # One machine took both of this juror's seats, and says so.
+    assert "*served by patient-anvil ×2*" in out
+    # This one was spread across two machines, one vote each — no count needed,
+    # and ties break on the name so the same votes always render the same way.
+    assert "*served by ludicrous-foot, patient-anvil*" in out
+
+
+def test_the_terminal_style_colours_verdicts_and_drops_the_markdown():
+    # Markdown on a screen just means reading around asterisks. The terminal
+    # dressing carries the same information in colour instead.
+    findings = tally(
+        [
+            Judgment(
+                claim="c",
+                opinions=[
+                    Opinion("a", "patient-anvil", "supported", ""),
+                    Opinion("b", "patient-anvil", "contradicted", ""),
+                ],
+            )
+        ]
+    )
+    out = report("doc.txt", panel(), findings, style=Terminal())
+
+    assert "**" not in out, f"markdown leaked onto the screen:\n{out}"
+    assert "##" not in out
+    # Supported and contradicted must not look alike — that is the whole point.
+    assert f"{Terminal.VERDICT_COLOURS['supported']}\033[1msupported" in out
+    assert f"{Terminal.VERDICT_COLOURS['contradicted']}\033[1mcontradicted" in out
+
+
+def test_both_styles_carry_the_same_words():
+    # One report, two skins: what you read on screen is what you saved.
+    findings = tally([judgment("The sky is blue.", ["supported", "unsupported"])])
+    plain = report("doc.txt", panel(), findings, style=Terminal())
+    for fragment in ("The sky is blue.", "1 of 2 juror(s) agreed", "Second opinion"):
+        assert fragment in plain
+        assert fragment in report("doc.txt", panel(), findings)
 
 
 def test_a_document_the_jury_agrees_with_says_so():

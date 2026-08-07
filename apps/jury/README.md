@@ -29,6 +29,25 @@ jurors' answers away: the tally happens on your machine, in plain code (`tally`
 in `jury.py`), and every vote is shown with the persona that judged and the
 maker that served it. A verdict you can't audit is just one more opinion.
 
+## Reading the verdict
+
+On a terminal the report is coloured rather than marked up: **supported** green,
+**unsupported** yellow, **contradicted** red, abstentions dimmed, and the
+headline glyph for each claim on the same scale. `--output` writes markdown
+instead, and so does a redirected stdout — that's someone saving the report, not
+reading it.
+
+The jury roster says which machine took which seat:
+
+```
+- #2 The Evidence Skeptic — "Where's the proof?" …
+  - served by patient-anvil ×2, ludicrous-foot
+```
+
+The relay picks a maker per request, so one juror's votes can land on several
+machines. That spread is the independence, and the roster shows it rather than
+averaging it away.
+
 ## Why it needs a network of many machines
 
 Each juror is a separate request, so a 7-juror panel is 7 requests that can be

@@ -72,3 +72,31 @@ the boring agreement; undecided last. Each headline carries a glyph:
 Every vote is printed with its persona *and* the maker that served it (with
 its advertised location, when the relay knows one) — the independence is the
 evidence, and a verdict you can't audit is just one more opinion.
+
+## Which machine took which seat
+
+The report answers that twice, at different resolutions. The **Served by** line
+lists every machine that served a vote, busiest first, with its location. The
+**jury roster** goes further and says, per juror, which machines sat in that
+seat:
+
+```
+- #2 The Evidence Skeptic — "Where's the proof?" …
+  - served by patient-anvil ×2, ludicrous-foot
+```
+
+A juror is not pinned to a machine. The relay picks a maker per request, so one
+persona's votes can spread across several, and the roster shows that spread
+rather than hiding it behind a single name. Machines are listed busiest first,
+ties broken on the name, so the same votes always render the same way and two
+reports can be diffed.
+
+## Markdown for a file, colour for a screen
+
+The same report is rendered two ways. `--output` writes markdown. Printing to a
+terminal drops the markup — asterisks are noise you have to read around — and
+spends colour on the distinction that matters: **supported** green,
+**unsupported** yellow, **contradicted** red, abstentions dimmed, with the
+headline glyphs on the same scale. Redirected stdout gets markdown, since that
+is somebody saving the report rather than reading it.
+
