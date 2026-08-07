@@ -69,6 +69,11 @@ the boring agreement; undecided last. Each headline carries a glyph:
 | ✓ | supported, unanimously |
 | · | undecided — no juror returned a usable verdict |
 
+On a terminal these carry one meaning per channel: the **glyph** says *how* the
+jury decided (unanimously, split, undecided), and the **colour** is taken from
+what it decided, so a headline never disagrees with the consensus line beneath
+it.
+
 Every vote is printed with its persona *and* the maker that served it (with
 its advertised location, when the relay knows one) — the independence is the
 evidence, and a verdict you can't audit is just one more opinion.

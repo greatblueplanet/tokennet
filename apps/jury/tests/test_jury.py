@@ -229,6 +229,16 @@ def test_the_terminal_style_colours_verdicts_and_drops_the_markdown():
     assert "✓ supported" in out and "⊘ contradicted" in out
 
 
+def test_the_headline_glyph_agrees_in_colour_with_its_consensus():
+    # One meaning per channel: colour is what the jury concluded, the glyph is
+    # how. A red ✗ over an orange "✗ unsupported" was the same mark in two
+    # colours for one judgement.
+    findings = tally([judgment("Idleness doubles creativity.", ["unsupported"] * 3)])
+    out = report("doc.txt", panel(), findings, style=Terminal())
+    headline = next(ln for ln in out.splitlines() if "Claim #1:" in ln)
+    assert headline.startswith(f"{Terminal.VERDICT_COLOURS['unsupported']}✗")
+
+
 def test_every_verdict_has_its_own_mark():
     # A reader who cannot distinguish the colours — colourblind, a dim theme,
     # a piped copy — must still be able to tell the four verdicts apart.

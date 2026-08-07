@@ -414,7 +414,7 @@ class Markdown:
     def verdict(self, text: str) -> str:
         return f"**{text}**"
 
-    def claim(self, number: int, glyph: str, text: str) -> str:
+    def claim(self, number: int, glyph: str, text: str, majority: str | None) -> str:
         return f"## {glyph} Claim #{number}: {text}"
 
     def consensus(self, verdict: str, agreed: int, voted: int) -> str:
@@ -480,11 +480,16 @@ class Terminal:
         mark = self.VERDICT_MARKS.get(text, "")
         return f"{colour}{self.BOLD}{mark} {text}{self.RESET}" if colour else text
 
-    # The glyph is how you skim a long report, so it carries the same scale.
-    FLAG_COLOURS = {"✓": GREEN, "≠": ORANGE, "⚠": ORANGE, "✗": RED}
+    def claim(self, number: int, glyph: str, text: str, majority: str | None) -> str:
+        """The headline. One meaning per channel: the colour says what the jury
+        concluded, the glyph says how (unanimously, split, undecided).
 
-    def claim(self, number: int, glyph: str, text: str) -> str:
-        colour = self.FLAG_COLOURS.get(glyph, self.DIM)
+        Colouring the glyph on its own scale meant a claim could show a red ✗
+        above an orange `✗ unsupported` — the same mark, two colours, one
+        judgement. Taking the colour from the majority verdict keeps them
+        agreeing, and the glyph still carries what the colour can't.
+        """
+        colour = self.VERDICT_COLOURS.get(majority or "", self.DIM)
         return (
             f"{colour}{glyph}{self.RESET} "
             f"{self.BOLD}Claim #{number}: {text}{self.RESET}"
@@ -612,7 +617,8 @@ def report(
     for number, finding in enumerate(findings, 1):
         # Claim, then straight into what the jury made of it, then the votes
         # underneath — one block per claim, indented so the page has a spine.
-        out.append(s.claim(number, _flag(finding), finding.claim))
+        majority = None if finding.undecided() else finding.majority
+        out.append(s.claim(number, _flag(finding), finding.claim, majority))
         if finding.undecided():
             out.append(s.em("No juror returned a usable verdict on this claim.") + "\n")
             continue
