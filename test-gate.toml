@@ -1,0 +1,19 @@
+# test-gate.toml — which changes require `just test` to run the offline suite.
+#
+# The gate skips the tests only when *every* changed path matches `skip`;
+# anything not listed here runs them. Both keys are required — see
+# ~/src/software-factory/docs/how_to/gate-the-test-suite.md.
+
+default_branch = "main"
+
+# Only paths that could never change a test result. pyproject.toml and uv.lock
+# are deliberately absent: a dependency move is a behaviour change. So is
+# apps/jury/examples/ — the jury's own tests read what is in there.
+skip = [
+  "docs/*",
+  "tasks/*",
+  "*.md",
+  ".claude/*",
+  "LICENSE",
+  "apps/LICENSE",
+]

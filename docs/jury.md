@@ -1,0 +1,74 @@
+# Second Opinion — the rules
+
+What `tokennet-jury` actually does between "here is a document" and the
+report, so nothing in the verdict is a surprise. The code is
+[`jury.py`](../apps/jury/jury.py); the roster is
+[`personas.py`](../apps/jury/personas.py) (`tokennet-jury --list` prints
+it).
+
+## The pipeline
+
+1. **Source** — a URL, a file, or `-` for stdin. A URL gets a *crude*
+   HTML-to-text pass: scripts and styles dropped, block tags become line
+   breaks, everything else kept — a nav bar will survive it. That's an honest
+   trade (the jury's question tolerates clutter), but for a clean read, pipe
+   the text in yourself.
+2. **Claims** — one model call lists the document's checkable factual claims.
+   One pass, one model, because every juror must judge the *same* list or
+   their disagreement means nothing. It is the pipeline's one single point of
+   failure, which is why the report prints the claims: you can see what was
+   judged.
+3. **Deliberation** — every persona judges every claim: `claims × jurors`
+   independent requests, fanned out across the fleet. A juror that fails on a
+   claim simply doesn't vote on it.
+4. **Tally and report** — locally, in plain code (`tally`). No model
+   summarizes the jurors.
+
+## The limits
+
+- **The document is truncated to 24,000 characters** (roughly ten pages of
+  prose, ~6k tokens). Context windows vary by whichever machine picks a
+  request up, and every juror must see the *same* text — so one conservative
+  budget for all of them. Point the jury at a long paper and it judges the
+  front of it.
+- **At most 8 claims** are extracted, preferring the load-bearing ones.
+- **Default jury: 5 personas**, seated at random from the 13 — odd, so a
+  majority is possible; small, because five reads of a claim is already a
+  real signal and the fleet's slots are somebody's electricity. `--jurors N`
+  resizes; `--panel 2,4,10` seats exact personas instead.
+- **One model for all jurors** (`--model`, default `any`): the diversity is
+  the persona, not the model.
+
+A run costs `claims × jurors + 1` completions — with the defaults, up to 41.
+
+## Verdicts, ties, abstentions
+
+Each juror answers with one of **supported**, **unsupported**,
+**contradicted** (the document says something incompatible with the claim). A
+reply that can't be read as one of those is recorded as **abstained** — the
+juror said nothing usable, and guessing which way it meant to vote would be
+worse than a smaller jury.
+
+The majority is the verdict with the most votes, abstentions never counted.
+**Ties break toward doubt**: on an equal count, `unsupported` beats
+`supported` and `contradicted` beats both. A jury split down the middle on
+whether a document backs a claim has not established that it does. If *nobody*
+voted, the claim is reported as undecided — an absence of a verdict, not
+dressed up as consensus.
+
+## The report's order and flags
+
+Claims are ordered by what deserves attention: doubted first, then split, then
+the boring agreement; undecided last. Each headline carries a glyph:
+
+| flag | meaning |
+|---|---|
+| ⚠ | doubted **and** split — the jury leans against it, and disagreed |
+| ✗ | doubted, unanimously |
+| ≠ | split, but the majority still said supported |
+| ✓ | supported, unanimously |
+| · | undecided — no juror returned a usable verdict |
+
+Every vote is printed with its persona *and* the maker that served it (with
+its advertised location, when the relay knows one) — the independence is the
+evidence, and a verdict you can't audit is just one more opinion.
