@@ -1,0 +1,53 @@
+[project]
+name = "tokennet-apps"
+version = "0.1.0"
+description = "Client apps for tokennet: a jury that argues about a document, and a streaming chat"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32",
+]
+
+[project.scripts]
+tokennet-jury = "apps.jury.jury:main"
+tokennet-chat = "apps.chat.chat:main"
+
+[project.urls]
+Repository = "https://github.com/greatblueplanet/tokennet"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "mypy>=1.14",
+    "types-requests>=2.32",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["apps"]
+
+[tool.pytest.ini_options]
+testpaths = ["apps"]
+markers = [
+    "live: talks to a real tokennet deployment (skipped when no credential is configured)",
+]
+
+# Version pin: Ruff refuses to run if the installed version doesn't match, so
+# local runs, hooks, and CI can't drift. The justfile fetches this exact
+# version via `uvx ruff@0.15.18` — keep the two in sync.
+[tool.ruff]
+required-version = "==0.15.18"
+target-version = "py311"
+
+[tool.ruff.lint]
+# Defaults (pyflakes + pycodestyle) plus import-sorting, pyupgrade, bugbear.
+extend-select = ["I", "UP", "B"]
+
+[tool.mypy]
+files = ["apps"]
+python_version = "3.11"
+check_untyped_defs = true

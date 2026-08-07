@@ -105,6 +105,27 @@ earns nothing.
 The two sides are independent. Consume without sharing, or share without
 consuming.
 
+## Apps
+
+Two client apps live in [`apps/`](apps/), with the relay client they share.
+They're reference code: a few hundred lines of plain Python each, meant to be
+read and forked.
+
+- [`tokennet-jury`](apps/jury/) puts a jury of reviewer personas on a document
+  and reports where they disagree. It's what a network of many machines is good
+  at: every juror is a separate request on a different maker.
+- [`tokennet-chat`](apps/chat/) is a terminal conversation that prints tokens as
+  they stream in, so you can watch how long the first token takes against the
+  whole reply.
+
+```sh
+uv run tokennet-chat
+uv run tokennet-jury apps/jury/examples/in-defense-of-doing-nothing.md
+```
+
+The apps are MIT licensed, not AGPL like the rest of the repo, because copying
+them into your own project is the point. See [`apps/README.md`](apps/README.md).
+
 ## Privacy
 
 **Use this network for public data.**

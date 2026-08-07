@@ -1,0 +1,26 @@
+name = "tokennet"
+prefix = "TNP"
+
+# Which part of this repo a task changes. One per task, required in every status
+# folder — on a closed task it is the record of where the work went.
+#
+# This repo is small and public: the client apps, the code they share, and the
+# prose around them. The list is deliberately short; it will earn more entries
+# when there is more here.
+[components]
+apps    = "A client app under apps/ — jury, chat, and whatever lands next. A task belongs here when what changes is one app's own behaviour."
+lib     = "apps/lib — the shared relay client every app dials the network through. A change here can break every app, which is why it is not filed under the app that prompted it."
+docs    = "The prose: README.md, docs/, and the per-app READMEs. Use it when the deliverable is the writing itself."
+tooling = "The repo's machinery — pyproject, the justfile, lefthook, the test gate, and this tracker."
+
+# What not doing it costs — the currency of the harm, not its size.
+[impacts]
+correctness  = "Produces a wrong answer, loses data, or silently stops doing something it exists to do."
+usability    = "People can run it but get it wrong, give up, or need help to finish — including being sent to something that does not exist."
+security     = "An attacker gains something, or a credential or private record is exposed."
+velocity     = "Future changes are slower or riskier than they need to be — duplication, uncovered behaviour, or prose that teaches the next reader something untrue."
+
+# Cross-cutting: what a task touches that recurs in any component.
+[tags]
+testing = "Work on the tests themselves: a coverage gap, a flaky test, or the fixtures behind them. Not for a task that merely needs a test written as part of doing it — that is every task."
+docs    = "The deliverable is a documentation file. Not for a task that merely cites one for context."
