@@ -1,6 +1,19 @@
 name = "tokennet"
 prefix = "TNP"
 
+# How this tracker hands out task ids. Required, no default: the two answers
+# differ in whether a second tool can be handed a number this one already gave
+# out, and a wrong guess is a duplicate id nobody sees until two branches merge.
+#
+# `remote` — take the number on the remote (a ref under refs/task-ids/) before
+#            writing the file, so of every tool reaching for it exactly one
+#            wins. This is what scripts/task.py has always done; tix now speaks
+#            the same protocol, so a tracker driven by both needs this one.
+# `local`  — mint from the local task files and never touch the network. Only
+#            safe where one checkout is the only thing filing tasks.
+[ids]
+reserve = "remote"
+
 # Which part of this repo a task changes. One per task, required in every status
 # folder — on a closed task it is the record of where the work went.
 #
