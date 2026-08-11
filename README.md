@@ -2,10 +2,11 @@
 
 A network of volunteer machines serving open language models.
 
-People with a spare GPU run a small program called a maker. It brings up an open
-model on their hardware and registers with a central relay, which tracks who's
-online and what they're running. Machines come and go all day, so the network is
-whatever happens to be connected when you ask.
+People run a small program called a maker on hardware they already own — a spare
+GPU, or an Apple Silicon Mac. It brings up an open model on their machine and
+registers with a central relay, which tracks who's online and what they're
+running. Machines come and go all day, so the network is whatever happens to be
+connected when you ask.
 
 To use it you talk to one endpoint, an OpenAI-style HTTP API at
 `https://data.tokennet.dev`. Point any OpenAI-compatible client at it and the
@@ -19,12 +20,13 @@ Three things make it more than a proxy:
   between jobs, a gaming rig overnight, a Mac that's awake anyway. A proxy
   resells datacenter time. This uses up slack that was going to waste.
 - **Every reply names the machine that served it.** The relay attaches the name,
-  not the maker, so a maker can't claim to be someone else. You know whose GPU
-  answered you.
-- **It's two-sided.** Providing GPU earns credit, consuming spends it. The credit
-  is called TNT (tokennet-tokens). New accounts get a grant, so you can try the
-  network without sharing anything, and you earn more by connecting a maker and
-  keeping it online. TNT is a closed loop: no cash-out, nothing billed to a card.
+  not the maker, so a maker can't claim to be someone else. You know whose
+  machine answered you.
+- **It's two-sided.** Providing capacity earns credit, consuming spends it. The
+  credit is called TNT (tokennet-tokens). New accounts get a grant, so you can
+  try the network without sharing anything, and you earn more by connecting a
+  maker and keeping it online. TNT is a closed loop: no cash-out, nothing billed
+  to a card.
 
 The models are open-weight. The idea is for the commons to provide AI inference
 free, paid for in shared capacity rather than money.
@@ -86,7 +88,7 @@ The reply carries the name of the maker that served it.
 You can revoke keys from the same **Keys** page. **Usage** shows what you've
 spent and earned.
 
-## Share a GPU
+## Share a machine
 
 The other half of an account. The console's **Makers** page issues an enrollment
 code. Run the maker program on your machine, give it the code, and it registers
@@ -95,12 +97,16 @@ connected time earns credit by the hour, since availability is supply even when
 nobody's asking.
 
 Part-time machines are welcome. A laptop that joins for an evening and leaves is
-worth having, and the network is built for hardware that comes and goes. An
-Apple Silicon Mac is a first-class maker: there's a menu-bar app that runs it
-without a terminal window, and Metal recipes for several of the models, so a Mac
-you're using for other things can serve while it's awake. Uptime credit starts
-after half an hour of continuous connection, so rapid connect/disconnect churn
-earns nothing.
+worth having, and the network is built for hardware that comes and goes. Uptime
+credit starts after half an hour of continuous connection, so rapid
+connect/disconnect churn earns nothing.
+
+You need less hardware than you'd think. An Apple Silicon Mac is a first-class
+maker: there's a menu-bar app that runs it without a terminal window, and Metal
+recipes for several of the models, so a Mac you're using for other things can
+serve while it's awake. Unified memory is what makes that work at modest sizes —
+a **24 GB Mac** has room for gpt-oss-20b at its full 128K context, which is a
+current reasoning model with tool calling, not a toy. No discrete GPU required.
 
 The two sides are independent. Consume without sharing, or share without
 consuming.
