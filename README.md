@@ -101,13 +101,16 @@ worth having, and the network is built for hardware that comes and goes. Uptime
 credit starts after half an hour of continuous connection, so rapid
 connect/disconnect churn earns nothing.
 
-**If you already run models locally, you have what a maker needs** — and if you
-never have, you may already own the machine for it. What decides that is
-memory, and there are two ways to have enough of it: a discrete GPU with room
-in its VRAM, or a unified-memory machine where the CPU and GPU draw on one pool
-and the whole of it is available for the weights. Both are first-class here.
+**If you already run models locally, you have what a maker needs.** And if you
+never have, you may already own the machine for it. This project can help you
+run and use a local model.
 
-The second is the one people miss. "I can't, I don't have a GPU" is the
+What decides that is memory, and there are two ways to have enough of it: a
+unified-memory machine, where the CPU and GPU draw on one pool and the whole of
+it is available for the weights, or a discrete GPU with room in its VRAM. Both
+are first-class here.
+
+Unified memory is the one people miss. "I can't, I don't have a GPU" is the
 commonest reason given for not joining, and it is usually said on a Mac that
 would serve perfectly well. There's a menu-bar app that runs the maker without
 a terminal window, and Metal recipes for many of the models, so a Mac you're
