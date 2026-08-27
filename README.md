@@ -2,12 +2,11 @@
 
 A network of volunteer machines serving open language models.
 
-People run a small program called a maker on hardware they already own. Usually
-that is a machine with a lot of memory rather than a graphics card — a Mac, or
-an NVIDIA DGX Spark — though a spare discrete GPU works too. It brings up an
-open model on their machine and registers with a central relay, which tracks
-who's online and what they're running. Machines come and go all day, so the
-network is whatever happens to be connected when you ask.
+People run a small program called a maker on hardware they already own — a GPU
+with enough VRAM, or a unified-memory machine like a Mac or an NVIDIA DGX
+Spark. It brings up an open model on their machine and registers with a central
+relay, which tracks who's online and what they're running. Machines come and go
+all day, so the network is whatever happens to be connected when you ask.
 
 To use it you talk to one endpoint, an OpenAI-style HTTP API at
 `https://data.tokennet.dev`. Point any OpenAI-compatible client at it and the
@@ -102,16 +101,18 @@ worth having, and the network is built for hardware that comes and goes. Uptime
 credit starts after half an hour of continuous connection, so rapid
 connect/disconnect churn earns nothing.
 
-**What decides whether you can serve is memory, not whether you own a GPU.**
-This is the point people get wrong most often: "I can't, I don't have a GPU" —
-said on a Mac that would make a perfectly good maker. Local inference has moved
-onto unified-memory machines, where the CPU and GPU draw on one pool, and the
-whole of that pool is available for the weights.
+**If you already run models locally, you have what a maker needs** — and if you
+never have, you may already own the machine for it. What decides that is
+memory, and there are two ways to have enough of it: a discrete GPU with room
+in its VRAM, or a unified-memory machine where the CPU and GPU draw on one pool
+and the whole of it is available for the weights. Both are first-class here.
 
-An Apple Silicon Mac is a first-class maker: there's a menu-bar app that runs it
-without a terminal window, and Metal recipes for many of the models, so a Mac
-you're using for other things can serve while it's awake. Any generation works —
-an M3 serves the same models an M5 does, a little slower. What changes with the
+The second is the one people miss. "I can't, I don't have a GPU" is the
+commonest reason given for not joining, and it is usually said on a Mac that
+would serve perfectly well. There's a menu-bar app that runs the maker without
+a terminal window, and Metal recipes for many of the models, so a Mac you're
+using for other things can serve while it's awake. Any generation works — an M3
+serves the same models an M5 does, a little slower. What changes with the
 memory is which models you're offered:
 
 - **24 GB** — a Mac mini, or the laptop you already own — has room for
@@ -122,6 +123,9 @@ memory is which models you're offered:
 - **64 GB** — a common MacBook Pro — serves the 27B and 30B models at q8 with a
   256K context.
 - **128 GB**, in a Mac Studio, covers the entire Metal catalog.
+
+On a discrete card the same arithmetic runs against VRAM rather than a shared
+pool: a **16 GB** card serves gpt-oss-20b, and **32 GB** reaches the 30B class.
 
 A **DGX Spark** is the same shape at the top end: 128 GB of coherent
 Grace-Blackwell memory, about 107 GiB of it usable for a model, which reaches
