@@ -2,11 +2,12 @@
 
 A network of volunteer machines serving open language models.
 
-People run a small program called a maker on hardware they already own — a spare
-GPU, or an Apple Silicon Mac. It brings up an open model on their machine and
-registers with a central relay, which tracks who's online and what they're
-running. Machines come and go all day, so the network is whatever happens to be
-connected when you ask.
+People run a small program called a maker on hardware they already own. Usually
+that is a machine with a lot of memory rather than a graphics card — a Mac, or
+an NVIDIA DGX Spark — though a spare discrete GPU works too. It brings up an
+open model on their machine and registers with a central relay, which tracks
+who's online and what they're running. Machines come and go all day, so the
+network is whatever happens to be connected when you ask.
 
 To use it you talk to one endpoint, an OpenAI-style HTTP API at
 `https://data.tokennet.dev`. Point any OpenAI-compatible client at it and the
@@ -101,12 +102,35 @@ worth having, and the network is built for hardware that comes and goes. Uptime
 credit starts after half an hour of continuous connection, so rapid
 connect/disconnect churn earns nothing.
 
-You need less hardware than you'd think. An Apple Silicon Mac is a first-class
-maker: there's a menu-bar app that runs it without a terminal window, and Metal
-recipes for several of the models, so a Mac you're using for other things can
-serve while it's awake. Unified memory is what makes that work at modest sizes —
-a **24 GB Mac** has room for gpt-oss-20b at its full 128K context, which is a
-current reasoning model with tool calling, not a toy. No discrete GPU required.
+**What decides whether you can serve is memory, not whether you own a GPU.**
+This is the point people get wrong most often: "I can't, I don't have a GPU" —
+said on a Mac that would make a perfectly good maker. Local inference has moved
+onto unified-memory machines, where the CPU and GPU draw on one pool, and the
+whole of that pool is available for the weights.
+
+An Apple Silicon Mac is a first-class maker: there's a menu-bar app that runs it
+without a terminal window, and Metal recipes for many of the models, so a Mac
+you're using for other things can serve while it's awake. Any generation works —
+an M3 serves the same models an M5 does, a little slower. What changes with the
+memory is which models you're offered:
+
+- **24 GB** — a Mac mini, or the laptop you already own — has room for
+  gpt-oss-20b at its full 128K context: a current reasoning model with tool
+  calling, not a toy.
+- **32 GB** reaches the 27B class at a 128K context, **48 GB** the same models
+  at 256K.
+- **64 GB** — a common MacBook Pro — serves the 27B and 30B models at q8 with a
+  256K context.
+- **128 GB**, in a Mac Studio, covers the entire Metal catalog.
+
+A **DGX Spark** is the same shape at the top end: 128 GB of coherent
+Grace-Blackwell memory, about 107 GiB of it usable for a model, which reaches
+the 120B-class models that little else can host outside a datacenter.
+
+Unified-memory PCs — AMD's Strix Halo and similar APUs — are not supported yet.
+The relay knows how to budget one, but the maker doesn't recognise the memory as
+unified and there's no recipe sized for it, so such a host would be offered far
+less than it can actually run. It's on the list.
 
 The two sides are independent. Consume without sharing, or share without
 consuming.
